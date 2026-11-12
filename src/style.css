@@ -1,0 +1,54 @@
+/* Mobile-first dark theme. CSS variables keep colors in one place. */
+:root {
+  --bg: #111318;
+  --surface: #1b1e26;
+  --text: #e8eaf0;
+  --muted: #8b90a0;
+  --accent: #e5484d; /* red, like a fight-corner */
+  --radius: 14px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  /* leave room for the fixed bottom bar + phone safe area */
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+
+.topbar {
+  padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+}
+.topbar h1 { margin: 0; font-size: 1.4rem; }
+
+main { padding: 0 16px; }
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.muted { color: var(--muted); }
+
+.tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  display: flex;
+  background: var(--surface);
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid #262a35;
+}
+.tabbar a {
+  flex: 1;
+  text-align: center;
+  padding: 14px 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.tabbar a.active { color: var(--accent); font-weight: 600; }
