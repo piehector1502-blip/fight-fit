@@ -8,8 +8,9 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
 |---|---------|--------|
 | 0 | Project skeleton (PWA, offline, DB, navigation, deploy) | ✅ done |
 | 1 | Profile + BMR / TDEE / calorie target | ✅ done |
-| 2 | Round timer (sound, vibration, presets) | ⏳ next |
-| 3 | Workouts log + kcal estimate (MET) | ⬜ |
+| 1b | Onboarding (first launch) + account fields | ✅ done |
+| 2 | Round timer (sound, vibration, presets) | ✅ done |
+| 3 | Workouts log + kcal estimate (MET) | ⏳ next |
 | 4 | Diet log + Open Food Facts product search | ⬜ |
 | 5 | Weight log + chart + estimated vs real weight | ⬜ |
 | 6 | Dashboard (day / week) | ⬜ |
@@ -33,6 +34,24 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
   live results card labeled "stima", warnings when limits kick in, saved in `db.profile` (id `'me'`).
 - Validation: age 14–100, height 120–230 cm, weight 30–250 kg.
 
+### Step 1b — Onboarding + account fields (2026-11-12)
+- First launch (no `db.profile` row): welcome screen with the profile form, tab bar hidden;
+  after "Inizia" → Home. Router in `main.js` checks the profile before every page.
+- New profile fields: firstName, lastName, email (required, future account login), phone (optional).
+- `src/pages/dashboard.js`: greeting by name + daily calorie target (full dashboard in step 6).
+
+### Step 2 — Round timer (2026-11-12)
+- `src/lib/timer.js` (pure): `buildPhases` (prep → round → rest …, no rest after last round),
+  `stateAt` (where are we after X ms), `cuesBetween` (cues in a time window), `formatMs`.
+  17 tests in `timer.test.js`.
+- `src/lib/feedback.js`: beeps generated with Web Audio (no audio files), `navigator.vibrate`,
+  Screen Wake Lock to keep the display on.
+- Cues: round start (2 beeps + vibration), round end (long beep), warning 10 s before end
+  of round (3 fast beeps), 3-2-1 ticks before each round, finish.
+- `src/pages/timer.js`: presets (seeded: Kumite 3x2min, Sacco 5x3min, Tabata 8x20s),
+  save/update by name, delete; full-screen run view coloured by phase (amber/red/green),
+  pause/resume, stop. Changing tab stops the timer.
+
 ## Decisions
 - **Vanilla JS + Vite** instead of a framework: you can understand every line; Vite gives
   a modern build (modules, minification) and makes adding tests/TypeScript easy later.
@@ -47,6 +66,9 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
   all estimates labeled as estimates.
 - **Birth date instead of age**: age is computed, so it stays correct over the years.
 - **Paces**: lose 0.25/0.5/0.75 kg/week, gain 0.25/0.5. 0.75 → 825 kcal requested, capped to 750.
+- **Timer uses elapsed time, not a countdown counter**: `performance.now()` differences, so it
+  never drifts; cues are computed for the window between two ticks, so a late tick misses nothing.
+- **Account data stays local for now**; it will be sent to the server only in phase 2.
 - **Testing on phone**: GitHub Pages (HTTPS is required for PWA install/offline).
 
 ### Setup: Git + GitHub Pages (2026-11-12)
@@ -62,8 +84,10 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
   offline didn't work. To do: install via Chrome, or build a real Android APK (Capacitor) later.
 - Silence Actions warning "Node.js 20 is deprecated": bump action versions in deploy.yml.
 - Optional: set git name/email in NixOS home-manager (`programs.git`) for all projects.
-- Step 2: round timer (round/rest/rounds/prep, beep + vibration at start/end and 10 s before end,
-  saved presets like "Kumite 3x2min").
+- Known limits of the timer as a PWA: sound/vibration stop if the screen is turned off or
+  the app goes to background (a native APK can fix this). iPhone ignores vibration.
+- Idea: when a timer session finishes, offer to save it as a workout (step 3).
+- Step 3: workouts log (type, duration, intensity) + kcal estimate with MET values.
 
 ## Publish a new version
 ```bash

@@ -3,6 +3,10 @@ import { db } from '../db.js';
 import { ACTIVITY_LEVELS, PACES, computeProfile, ageFromBirthDate } from '../lib/calc.js';
 
 const DEFAULTS = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
   sex: 'male',
   birthDate: '',
   heightCm: '',
@@ -14,12 +18,43 @@ const DEFAULTS = {
 
 const GOAL_LABELS = { lose: 'Dimagrire', maintain: 'Mantenere', gain: 'Massa' };
 
-export async function renderProfile(container) {
-  // Load the saved profile (or defaults the first time)
-  const saved = (await db.profile.get('me')) ?? DEFAULTS;
+/**
+ * @param {HTMLElement} container
+ * @param {{ onboarding?: boolean, onSaved?: () => void }} [options]
+ *   onboarding: first launch (welcome text, "Inizia" button)
+ *   onSaved: called after a successful save
+ */
+export async function renderProfile(container, { onboarding = false, onSaved } = {}) {
+  // Load the saved profile (or defaults the first time).
+  // Spread DEFAULTS first so profiles saved before new fields existed still work.
+  const saved = { ...DEFAULTS, ...(await db.profile.get('me')) };
 
   container.innerHTML = `
+    ${onboarding ? `
+      <section class="card">
+        <h2>Benvenuto in FightFit 👋</h2>
+        <p class="muted">Inserisci i tuoi dati: servono per calcolare quante calorie ti servono
+        ogni giorno. Restano salvati sul tuo telefono e puoi cambiarli quando vuoi dal tab Profilo.</p>
+      </section>` : ''}
+
     <form id="profile-form" class="card form" novalidate>
+      <h2>Account</h2>
+      <div class="row">
+        <label>Nome
+          <input type="text" name="firstName" autocomplete="given-name" required>
+        </label>
+        <label>Cognome
+          <input type="text" name="lastName" autocomplete="family-name" required>
+        </label>
+      </div>
+      <label>Email
+        <input type="email" name="email" autocomplete="email" inputmode="email" required>
+      </label>
+      <label>Telefono <span class="muted small">(facoltativo)</span>
+        <input type="tel" name="phone" autocomplete="tel" inputmode="tel">
+      </label>
+
+      <h2>Dati fisici</h2>
       <fieldset>
         <legend>Sesso <span class="muted small">(per la formula)</span></legend>
         <div class="segmented">
@@ -64,7 +99,7 @@ export async function renderProfile(container) {
         <select name="paceKgPerWeek"></select>
       </label>
 
-      <button type="submit" class="btn">Salva profilo</button>
+      <button type="submit" class="btn">${onboarding ? 'Inizia' : 'Salva profilo'}</button>
       <p id="save-status" class="muted small" aria-live="polite"></p>
     </form>
 
@@ -93,6 +128,7 @@ export async function renderProfile(container) {
     // put() = insert or replace the row with id 'me'
     await db.profile.put({ id: 'me', ...profile, updatedAt: Date.now() });
     status.textContent = '✓ Salvato sul telefono';
+    onSaved?.(); // ?. = call it only if it was passed
   });
 
   showResults(container, readForm(form));
@@ -101,6 +137,10 @@ export async function renderProfile(container) {
 // --- Form helpers ------------------------------------------------------
 
 function fillForm(form, p) {
+  form.elements.firstName.value = p.firstName;
+  form.elements.lastName.value = p.lastName;
+  form.elements.email.value = p.email;
+  form.elements.phone.value = p.phone;
   form.elements.sex.value = p.sex;
   form.elements.birthDate.value = p.birthDate;
   form.elements.heightCm.value = p.heightCm;
@@ -129,6 +169,10 @@ function updatePaceOptions(form, selected) {
 function readForm(form) {
   const f = form.elements;
   return {
+    firstName: f.firstName.value.trim(),
+    lastName: f.lastName.value.trim(),
+    email: f.email.value.trim().toLowerCase(),
+    phone: f.phone.value.trim(),
     sex: f.sex.value,
     birthDate: f.birthDate.value,
     heightCm: Number(f.heightCm.value),
@@ -141,6 +185,15 @@ function readForm(form) {
 
 /** Returns an error message, or null if everything is fine. */
 function validate(p) {
+  if (!p.firstName || !p.lastName) return 'Inserisci nome e cognome.';
+  // Simple check: something@something.something
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return 'Email non valida.';
+  if (p.phone && !/^\+?[0-9 ()-]{6,20}$/.test(p.phone)) return 'Numero di telefono non valido.';
+  return validateBody(p);
+}
+
+/** Only the fields needed by the formulas (used for the live results). */
+function validateBody(p) {
   if (!p.birthDate) return 'Inserisci la data di nascita.';
   const age = ageFromBirthDate(p.birthDate);
   if (age < 14 || age > 100) return "L'età deve essere tra 14 e 100 anni.";
@@ -153,7 +206,7 @@ function validate(p) {
 
 function showResults(container, profile) {
   const box = container.querySelector('#results');
-  const error = validate(profile);
+  const error = validateBody(profile);
   if (error) {
     box.innerHTML = `<p class="muted">Compila i dati per vedere il tuo fabbisogno.</p>`;
     return;

@@ -108,3 +108,56 @@ input:focus, select:focus { outline: 2px solid var(--accent); border-color: tran
    or an <input> could push the page wider than the phone screen. */
 .form > *, .form .row > label, input, select { min-width: 0; max-width: 100%; }
 select { text-overflow: ellipsis; }
+
+/* ---------- Layout states ---------- */
+/* No tab bar during onboarding or while the timer runs */
+body.onboarding .tabbar,
+body.timer-running .tabbar { display: none; }
+body.timer-running .topbar { display: none; }
+
+.card-link { display: flex; flex-direction: column; gap: 4px; color: var(--text); text-decoration: none; }
+.form h2 { margin: 6px 0 0; }
+
+.btn-big { font-size: 1.2rem; padding: 18px; }
+.btn-ghost { background: transparent; border: 1px solid rgb(255 255 255 / 0.25); color: var(--text); }
+details summary { cursor: pointer; padding: 4px 0; }
+
+/* ---------- Timer: presets ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font: inherit; font-size: 0.9rem; color: var(--text);
+  background: var(--bg); border: 1px solid #2c3140; border-radius: 99px;
+  padding: 8px 14px; cursor: pointer;
+}
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ---------- Timer: run view ---------- */
+.runner {
+  /* full screen: 100dvh = real visible height on phones */
+  min-height: calc(100dvh - 32px);
+  margin: 16px 0;
+  border-radius: var(--radius);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 24px 16px; text-align: center;
+  background: var(--surface);
+  transition: background-color 0.3s;
+}
+.runner[data-phase='prep']  { background: #5c4a12; }
+.runner[data-phase='round'] { background: #7a1f24; }
+.runner[data-phase='rest']  { background: #1d4d33; }
+.runner[data-phase='done']  { background: var(--surface); }
+.runner.last10 .clock { animation: pulse 1s infinite; }
+
+.phase { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.08em; }
+.clock {
+  font-size: min(34vw, 11rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums; /* digits same width: no jumping */
+}
+.progress { width: 100%; height: 8px; background: rgb(0 0 0 / 0.3); border-radius: 99px; overflow: hidden; }
+.progress > div { height: 100%; width: 0; background: #fff; transition: width 0.1s linear; }
+.runner-buttons { width: 100%; display: flex; gap: 12px; margin-top: 12px; }
+.runner-buttons .btn { flex: 1; }
+
+@keyframes pulse { 50% { opacity: 0.45; } }
