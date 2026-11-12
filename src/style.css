@@ -161,3 +161,36 @@ details summary { cursor: pointer; padding: 4px 0; }
 .runner-buttons .btn { flex: 1; }
 
 @keyframes pulse { 50% { opacity: 0.45; } }
+
+/* ---------- Switch (checkbox styled as a toggle) ---------- */
+.form .switch-row { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.switch {
+  appearance: none; flex: none;
+  width: 50px; height: 30px; padding: 0;
+  border-radius: 99px; border: 0; background: #2c3140;
+  position: relative; cursor: pointer; transition: background 0.2s;
+}
+.switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 24px; height: 24px; border-radius: 50%; background: #fff;
+  transition: transform 0.2s;
+}
+.switch:checked { background: var(--accent); }
+.switch:checked::after { transform: translateX(20px); }
+
+.btn-light { background: #fff; color: #111; width: 100%; }
+
+/* ---------- Workouts ---------- */
+.estimate { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.estimate strong { font-size: 1.3rem; color: var(--accent); }
+.day-title { display: flex; justify-content: space-between; align-items: baseline; }
+.sessions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.sessions li { display: flex; align-items: center; gap: 12px; }
+.session-icon { font-size: 1.6rem; }
+.session-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.icon-btn {
+  font: inherit; font-size: 0.85rem; color: var(--muted);
+  background: transparent; border: 1px solid #2c3140; border-radius: 8px;
+  padding: 6px 10px; cursor: pointer; flex: none;
+}
+.icon-btn.confirm { color: #fff; background: var(--accent); border-color: var(--accent); }

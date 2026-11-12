@@ -1,7 +1,12 @@
 // Round timer page: preset list + settings, then a full-screen run view.
 import { db } from '../db.js';
 import { buildPhases, totalMs, stateAt, cuesBetween, formatMs } from '../lib/timer.js';
-import { unlockAudio, playCue, keepScreenOn, releaseScreen } from '../lib/feedback.js';
+import {
+  unlockAudio, playCue, keepScreenOn, releaseScreen,
+  isVoiceEnabled, setVoiceEnabled, voiceSupported, stopVoice,
+} from '../lib/feedback.js';
+import { setWorkoutDraft } from './workouts.js';
+import { escapeHtml } from '../lib/html.js';
 
 const DEFAULT_PRESETS = [
   { name: 'Kumite 3x2min', prepSec: 10, roundSec: 120, restSec: 60, rounds: 3 },
@@ -46,6 +51,10 @@ export async function renderTimer(container) {
         <label>N° round<input type="number" name="rounds" min="1" max="50" inputmode="numeric"></label>
         <label>Preparazione (sec)<input type="number" name="prepSec" min="0" max="120" inputmode="numeric"></label>
       </div>
+      <label class="switch-row" ${voiceSupported() ? '' : 'hidden'}>
+        <span>🔊 Voce <span class="muted small">("10 secondi", "3, 2, 1", "Pausa"…)</span></span>
+        <input type="checkbox" name="voice" class="switch">
+      </label>
       <p id="total" class="muted small"></p>
       <button type="submit" class="btn btn-big">▶ Start</button>
 
@@ -78,6 +87,9 @@ export async function renderTimer(container) {
     const chip = e.target.closest('.chip');
     if (chip) selectPreset(presets.find((p) => p.id === Number(chip.dataset.id)));
   });
+
+  form.elements.voice.checked = isVoiceEnabled();
+  form.elements.voice.addEventListener('change', (e) => setVoiceEnabled(e.target.checked));
 
   form.addEventListener('input', () => updateTotal(form));
 
@@ -146,6 +158,7 @@ function updateTotal(form) {
 function startRun(container, cfg) {
   const phases = buildPhases(cfg);
   run = {
+    cfg,
     phases,
     rounds: cfg.rounds,
     accumulatedMs: 0,           // time counted before the last pause
@@ -167,11 +180,23 @@ function startRun(container, cfg) {
         <button type="button" class="btn btn-ghost" id="stop">■ Stop</button>
         <button type="button" class="btn" id="pause">❚❚ Pausa</button>
       </div>
+      <button type="button" class="btn btn-light" id="save-workout" hidden>💾 Salva come allenamento</button>
     </section>
   `;
 
   container.querySelector('#pause').addEventListener('click', togglePause);
   container.querySelector('#stop').addEventListener('click', () => renderTimer(container));
+  container.querySelector('#save-workout').addEventListener('click', () => {
+    const minutes = Math.round(totalMs(run.phases) / 60000);
+    setWorkoutDraft({
+      type: 'kumite',
+      durationMin: Math.max(1, minutes),
+      intensity: 'high',
+      notes: `Timer: ${run.cfg.rounds} round × ${formatMs(run.cfg.roundSec * 1000)}`,
+      source: 'timer',
+    });
+    location.hash = '#/workouts'; // the router stops the timer and opens the form
+  });
 
   keepScreenOn();
   document.addEventListener('visibilitychange', onVisibility);
@@ -189,7 +214,7 @@ function tick() {
   const now = elapsedMs();
 
   // Play every cue between the previous tick and now
-  for (const cue of cuesBetween(run.phases, run.lastElapsed, now)) playCue(cue.type);
+  for (const cue of cuesBetween(run.phases, run.lastElapsed, now)) playCue(cue);
   run.lastElapsed = now;
 
   const s = stateAt(run.phases, now);
@@ -204,6 +229,7 @@ function tick() {
     el('remaining').textContent = '';
     el('pause').hidden = true;
     el('stop').textContent = '↩ Indietro';
+    el('save-workout').hidden = false;
     clearInterval(run.intervalId);
     releaseScreen();
     return;
@@ -249,12 +275,6 @@ export function stopRun() {
   document.removeEventListener('visibilitychange', onVisibility);
   document.body.classList.remove('timer-running');
   releaseScreen();
+  stopVoice();
   run = null;
-}
-
-/** Preset names are typed by the user: never put raw text into innerHTML. */
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }

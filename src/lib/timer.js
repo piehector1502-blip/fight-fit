@@ -56,46 +56,57 @@ export function stateAt(phases, elapsedMs) {
 }
 
 /**
- * Which sound/vibration cues happen in the time window (fromMs, toMs]?
+ * Which sound/voice/vibration cues happen in the time window (fromMs, toMs]?
  * The page calls this on every tick with the previous and current elapsed
  * time, so no cue is missed even if a tick arrives late.
  *
  * Cue types:
- *  'roundStart' – a round begins
- *  'roundEnd'   – a round ends (rest or finish follows)
+ *  'prepStart'  – the preparation phase begins (at time 0)
+ *  'tick'       – 3, 2, 1 seconds before a round starts   (n = 3|2|1)
+ *  'roundStart' – a round begins                           (round = 1..N)
  *  'warning'    – WARNING_SEC before the end of a round
- *  'tick'       – 3, 2, 1 seconds before a round starts
+ *  'endTick'    – 3, 2, 1 seconds before a round ends      (n = 3|2|1)
+ *  'roundEnd'   – a round ends and a rest follows
  *  'finish'     – the whole workout is over
+ *
+ * @returns {{type: string, atMs: number, round?: number, n?: number}[]}
+ *   sorted by time
  */
 export function cuesBetween(phases, fromMs, toMs) {
   const cues = [];
-  const inWindow = (t) => t > fromMs && t <= toMs;
   const total = totalMs(phases);
+  // Add a cue only if its moment falls inside the window
+  const add = (atMs, cue) => {
+    if (atMs > fromMs && atMs <= toMs) cues.push({ ...cue, atMs });
+  };
 
   phases.forEach((p, i) => {
-    if (p.type !== 'round') return;
     const end = p.startMs + p.durationMs;
 
-    // Start of the round. For a round at t = 0 (no preparation) the page
-    // calls cuesBetween(phases, -1, 0) when you press Start.
-    if (inWindow(p.startMs)) {
-      cues.push({ type: 'roundStart', round: p.round });
-    }
-    // Countdown ticks before the round, only if something comes before it
+    if (p.type === 'prep') add(p.startMs, { type: 'prepStart' });
+    if (p.type !== 'round') return;
+
+    // 3-2-1 before the round, only if something (prep/rest) comes before it
     if (i > 0) {
-      for (let s = COUNTDOWN_SEC; s >= 1; s--) {
-        if (inWindow(p.startMs - s * 1000)) cues.push({ type: 'tick', round: p.round });
-      }
+      for (let n = COUNTDOWN_SEC; n >= 1; n--) add(p.startMs - n * 1000, { type: 'tick', n });
     }
-    // Warning before the end (only for rounds longer than the warning itself)
-    if (p.durationMs > WARNING_SEC * 1000 && inWindow(end - WARNING_SEC * 1000)) {
-      cues.push({ type: 'warning', round: p.round });
+    // For a round at t = 0 (no preparation) the page calls
+    // cuesBetween(phases, -1, 0) when you press Start.
+    add(p.startMs, { type: 'roundStart', round: p.round });
+
+    // Warning only for rounds longer than the warning itself
+    if (p.durationMs > WARNING_SEC * 1000) add(end - WARNING_SEC * 1000, { type: 'warning' });
+
+    // 3-2-1 before the end of the round
+    if (p.durationMs > COUNTDOWN_SEC * 1000) {
+      for (let n = COUNTDOWN_SEC; n >= 1; n--) add(end - n * 1000, { type: 'endTick', n });
     }
-    if (inWindow(end) && end < total) cues.push({ type: 'roundEnd', round: p.round });
+    // Last round: the end is 'finish', not 'roundEnd'
+    if (end < total) add(end, { type: 'roundEnd', round: p.round });
   });
 
-  if (inWindow(total)) cues.push({ type: 'finish' });
-  return cues;
+  add(total, { type: 'finish' });
+  return cues.sort((a, b) => a.atMs - b.atMs);
 }
 
 /** 125000 -> "2:05" (rounds up, so the display shows 0:01 until the very end). */

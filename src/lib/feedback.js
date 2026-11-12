@@ -45,15 +45,83 @@ function vibrate(pattern) {
   if ('vibrate' in navigator) navigator.vibrate(pattern);
 }
 
-/** One place that decides how each timer cue sounds and feels. */
-export function playCue(type) {
-  switch (type) {
+// --- Voice (Web Speech API) ------------------------------------------
+// Uses the phone's own text-to-speech; works offline if an Italian voice
+// is installed (Android: Settings > Text-to-speech).
+
+const VOICE_KEY = 'fightfit.voice';
+let italianVoice = null;
+
+function pickItalianVoice() {
+  if (!('speechSynthesis' in window)) return;
+  italianVoice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith('it')) ?? null;
+}
+if ('speechSynthesis' in window) {
+  pickItalianVoice();
+  // The voice list often loads a moment after the page
+  speechSynthesis.addEventListener('voiceschanged', pickItalianVoice);
+}
+
+/** Voice on/off, remembered on this device (default: on). */
+export function isVoiceEnabled() {
+  try { return localStorage.getItem(VOICE_KEY) !== 'off'; } catch { return true; }
+}
+export function setVoiceEnabled(on) {
+  try { localStorage.setItem(VOICE_KEY, on ? 'on' : 'off'); } catch { /* storage unavailable */ }
+}
+export const voiceSupported = () => 'speechSynthesis' in window;
+
+function speak(text) {
+  if (!voiceSupported()) return;
+  speechSynthesis.cancel(); // drop anything still queued: timing matters more
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'it-IT';
+  if (italianVoice) u.voice = italianVoice;
+  u.rate = 1.15; // a bit faster, so "tre, due, uno" fits in 3 seconds
+  speechSynthesis.speak(u);
+}
+
+const NUMBERS = { 3: 'tre', 2: 'due', 1: 'uno' };
+
+/** What the voice says for each cue. */
+function voiceText(cue) {
+  switch (cue.type) {
+    case 'prepStart':  return 'Preparazione';
+    case 'tick':
+    case 'endTick':    return NUMBERS[cue.n];
+    case 'roundStart': return cue.round === 1 ? 'Start' : `Round ${cue.round}`;
+    case 'warning':    return '10 secondi';
+    case 'roundEnd':   return 'Pausa';
+    case 'finish':     return 'Fine. Ottimo lavoro!';
+  }
+  return null;
+}
+
+/**
+ * One place that decides how each timer cue sounds, speaks and vibrates.
+ * @param {{type: string, round?: number, n?: number}} cue
+ */
+export function playCue(cue) {
+  const voice = isVoiceEnabled() && voiceSupported();
+  if (voice) {
+    const text = voiceText(cue);
+    if (text) speak(text);
+  }
+
+  switch (cue.type) {
     case 'roundStart': beep(1000, 250, 2); vibrate([300, 100, 300]); break;
     case 'roundEnd':   beep(600, 900);     vibrate([800]); break;
-    case 'warning':    beep(1400, 120, 3, 80); vibrate([100, 80, 100, 80, 100]); break;
-    case 'tick':       beep(800, 100); break;
     case 'finish':     beep(600, 400, 3, 150); vibrate([500, 200, 500, 200, 500]); break;
+    // With the voice on, these are spoken instead of beeped
+    case 'warning':    if (!voice) beep(1400, 120, 3, 80); vibrate([100, 80, 100, 80, 100]); break;
+    case 'tick':       if (!voice) beep(800, 100); break;
+    case 'endTick':    if (!voice) beep(900, 100); break;
   }
+}
+
+/** Stop talking immediately (Stop button / leaving the page). */
+export function stopVoice() {
+  if (voiceSupported()) speechSynthesis.cancel();
 }
 
 // --- Screen Wake Lock: keep the display on while the timer runs ---------

@@ -10,8 +10,9 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
 | 1 | Profile + BMR / TDEE / calorie target | ✅ done |
 | 1b | Onboarding (first launch) + account fields | ✅ done |
 | 2 | Round timer (sound, vibration, presets) | ✅ done |
-| 3 | Workouts log + kcal estimate (MET) | ⏳ next |
-| 4 | Diet log + Open Food Facts product search | ⬜ |
+| 2b | Timer voice announcements | ✅ done |
+| 3 | Workouts log + kcal estimate (MET) | ✅ done |
+| 4 | Diet log + Open Food Facts product search | ⏳ next |
 | 5 | Weight log + chart + estimated vs real weight | ⬜ |
 | 6 | Dashboard (day / week) | ⬜ |
 | 7 | Account + Java server + sync (phase 2) | ⬜ |
@@ -52,6 +53,27 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
   save/update by name, delete; full-screen run view coloured by phase (amber/red/green),
   pause/resume, stop. Changing tab stops the timer.
 
+### Step 2b — Timer voice (2026-11-12)
+- Web Speech API (`speechSynthesis`, it-IT): "Preparazione", "tre, due, uno", "Start" /
+  "Round N", "10 secondi", "tre, due, uno", "Pausa", "Fine. Ottimo lavoro!".
+- New cues in `cuesBetween`: `prepStart`, `endTick` (3-2-1 before round end); cues carry `n`
+  and `round` and are returned sorted by time.
+- Voice on/off switch in the timer, remembered in localStorage (`fightfit.voice`).
+  With voice on, tick/warning beeps are replaced by speech; start/end beeps + vibration stay.
+
+### Step 3 — Workouts log (2026-11-12)
+- `src/lib/met.js`: 10 workout types × 3 intensities (low/medium/high) with MET values
+  (approximate, based on the Compendium of Physical Activities, e.g. martial arts moderate 10.3).
+  `estimateKcal` → kcal = MET × kg × h, and netKcal = (MET − 1) × kg × h.
+- `src/lib/dates.js`: local 'YYYY-MM-DD' helpers (not toISOString, which is UTC).
+- `src/lib/html.js`: `escapeHtml` for user text (notes, preset names).
+- `src/pages/workouts.js`: form with live estimate, history of the last 60 days grouped by day,
+  delete with two taps, totals of the last 7 days.
+- Timer → "Salva come allenamento" pre-fills the form (type kumite, high intensity, duration).
+- Saved per session: type, date, durationMin, intensity, notes, met, weightKg, kcal, netKcal,
+  source ('manual' | 'timer'), createdAt, updatedAt.
+- Tests: 44 in total.
+
 ## Decisions
 - **Vanilla JS + Vite** instead of a framework: you can understand every line; Vite gives
   a modern build (modules, minification) and makes adding tests/TypeScript easy later.
@@ -68,6 +90,9 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
 - **Paces**: lose 0.25/0.5/0.75 kg/week, gain 0.25/0.5. 0.75 → 825 kcal requested, capped to 750.
 - **Timer uses elapsed time, not a countdown counter**: `performance.now()` differences, so it
   never drifts; cues are computed for the window between two ticks, so a late tick misses nothing.
+- **kcal stored at save time** (with the weight used): changing weight later doesn't rewrite history.
+- **Open decision for step 5**: TDEE (activity level) already includes training. To avoid
+  counting workouts twice, use either "TDEE + nothing" or "sedentary TDEE + netKcal of workouts".
 - **Account data stays local for now**; it will be sent to the server only in phase 2.
 - **Testing on phone**: GitHub Pages (HTTPS is required for PWA install/offline).
 
@@ -86,8 +111,8 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
 - Optional: set git name/email in NixOS home-manager (`programs.git`) for all projects.
 - Known limits of the timer as a PWA: sound/vibration stop if the screen is turned off or
   the app goes to background (a native APK can fix this). iPhone ignores vibration.
-- Idea: when a timer session finishes, offer to save it as a workout (step 3).
-- Step 3: workouts log (type, duration, intensity) + kcal estimate with MET values.
+- Idea: the profile weight should follow the latest weigh-in once step 5 exists.
+- Step 4: diet log (meals, daily kcal/macros vs target) + product search on Open Food Facts.
 
 ## Publish a new version
 ```bash
