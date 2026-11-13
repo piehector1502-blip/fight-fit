@@ -12,8 +12,8 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
 | 2 | Round timer (sound, vibration, presets) | ✅ done |
 | 2b | Timer voice announcements | ✅ done |
 | 3 | Workouts log + kcal estimate (MET) | ✅ done |
-| 4 | Diet log + Open Food Facts product search | ⏳ next |
-| 5 | Weight log + chart + estimated vs real weight | ⬜ |
+| 4 | Diet log + Open Food Facts product search | ✅ done (online search to verify on device) |
+| 5 | Weight log + chart + estimated vs real weight | ⏳ next |
 | 6 | Dashboard (day / week) | ⬜ |
 | 7 | Account + Java server + sync (phase 2) | ⬜ |
 
@@ -74,6 +74,26 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
   source ('manual' | 'timer'), createdAt, updatedAt.
 - Tests: 44 in total.
 
+### Step 4 — Diet (2026-11-13)
+- `src/lib/nutrition.js` (pure, 11 tests): `normalizeOffProduct` (legacy + Search-a-licious
+  formats, Italian name preferred, kJ→kcal ÷ 4.184), `scale` (per 100 g → grams),
+  `sumEntries`, `macroTargets` (protein 2.0 g/kg when losing, 1.8 otherwise; fat 25% kcal;
+  carbs = rest), `validatePer100` for manual products.
+- `src/lib/off.js`: Open Food Facts search. Tries Search-a-licious
+  (`search.openfoodfacts.org/search`), falls back to legacy `/cgi/search.pl`.
+  Search only on button press + 3 s minimum gap (OFF limit ≈ 10 searches/min), 12 s timeout,
+  clear Italian error messages (offline, no response).
+- `src/pages/diet.js`: day navigation (no future days), kcal eaten / remaining / target with
+  bar, macro bars, 4 meals (Colazione, Pranzo, Cena, Spuntini) with two-tap delete;
+  add flow: saved products (filtered while typing, offline, most used first) → online search →
+  portion (grams, default = serving size or 100 g, live kcal/macros) → saved;
+  manual product from label values. Credit "Open Food Facts (ODbL)".
+- `db.meals` entry: date, meal, name, brand, barcode, grams, per100 (copy), kcal, protein,
+  carbs, fat, createdAt, updatedAt. `db.foods`: product + useCount, lastUsedAt, lastGrams.
+- `src/lib/ui.js`: `twoTapDelete` shared by workouts and diet.
+- Tested with mocked OFF responses (incl. fallback when Search-a-licious fails);
+  real OFF could not be reached from the dev sandbox → verify on PC/phone.
+
 ## Decisions
 - **Vanilla JS + Vite** instead of a framework: you can understand every line; Vite gives
   a modern build (modules, minification) and makes adding tests/TypeScript easy later.
@@ -93,6 +113,8 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
 - **kcal stored at save time** (with the weight used): changing weight later doesn't rewrite history.
 - **Open decision for step 5**: TDEE (activity level) already includes training. To avoid
   counting workouts twice, use either "TDEE + nothing" or "sedentary TDEE + netKcal of workouts".
+- **Meal entries copy the per-100 g values**: editing a saved product never changes past days.
+- **Macros are indicative**, shown with the rule used; calories remain the main target.
 - **Account data stays local for now**; it will be sent to the server only in phase 2.
 - **Testing on phone**: GitHub Pages (HTTPS is required for PWA install/offline).
 
@@ -112,7 +134,9 @@ Personal PWA for combat-sport training (karate / kumite) and diet.
 - Known limits of the timer as a PWA: sound/vibration stop if the screen is turned off or
   the app goes to background (a native APK can fix this). iPhone ignores vibration.
 - Idea: the profile weight should follow the latest weigh-in once step 5 exists.
-- Step 4: diet log (meals, daily kcal/macros vs target) + product search on Open Food Facts.
+- Diet ideas for later: barcode scanner (camera), edit grams of an entry, copy yesterday's meal,
+  manage/delete saved products.
+- Step 5: weight log + chart; estimated weight from calorie balance (7700 kcal ≈ 1 kg) vs real.
 
 ## Publish a new version
 ```bash

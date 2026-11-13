@@ -194,3 +194,31 @@ details summary { cursor: pointer; padding: 4px 0; }
   padding: 6px 10px; cursor: pointer; flex: none;
 }
 .icon-btn.confirm { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+/* ---------- Diet ---------- */
+.day-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.icon-btn:disabled { opacity: 0.3; cursor: default; }
+.kcal-summary { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; gap: 8px; margin-bottom: 12px; }
+.kcal-summary > div { display: flex; flex-direction: column; gap: 4px; }
+.stat.over { color: #f5a524; }
+
+.bar { height: 8px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+.bar > div { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.3s; }
+.bar.over > div { background: #f5a524; }
+.macros { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.macro-head { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; }
+
+.add-btn { width: 100%; margin-top: 12px; padding: 10px; }
+.link-btn {
+  font: inherit; color: var(--accent); background: none; border: 0;
+  padding: 4px 0 12px; cursor: pointer;
+}
+.product-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.product {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid #2c3140; border-radius: 10px; padding: 10px 12px; cursor: pointer;
+}
+.nowrap { white-space: nowrap; }
+.credit { text-align: center; }
+.credit a { color: var(--muted); }

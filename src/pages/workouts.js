@@ -4,6 +4,7 @@ import { db } from '../db.js';
 import { WORKOUT_TYPES, INTENSITIES, estimateKcal } from '../lib/met.js';
 import { toISODate, daysAgo, formatDay } from '../lib/dates.js';
 import { escapeHtml } from '../lib/html.js';
+import { twoTapDelete } from '../lib/ui.js';
 
 // A pre-filled form coming from another page (e.g. the timer's
 // "Salva come allenamento"). Used once, then cleared.
@@ -172,17 +173,10 @@ async function showHistory(container) {
       </ul>
     </section>`).join('');
 
-  // Delete needs two taps: the first one asks for confirmation
-  history.querySelectorAll('[data-delete]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!btn.classList.contains('confirm')) {
-        btn.classList.add('confirm');
-        btn.textContent = 'Elimina?';
-        setTimeout(() => { btn.classList.remove('confirm'); btn.textContent = '✕'; }, 3000);
-        return;
-      }
+  // Delete needs two taps (see lib/ui.js)
+  history.querySelectorAll('[data-delete]').forEach((btn) =>
+    twoTapDelete(btn, async () => {
       await db.workouts.delete(Number(btn.dataset.delete));
       await showHistory(container);
-    });
-  });
+    }));
 }
